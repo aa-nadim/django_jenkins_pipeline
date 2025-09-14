@@ -59,32 +59,41 @@ pipeline {
             }
         }
         
-        stage('🚀 Deploy') {
+    stages {
+        stage('⚡Deploy') {
             steps {
-                echo '🚀 Starting Deploy Stage...'
+                echo '⚡ SUPER FAST CI/CD - Direct Deploy!'
                 
-                // Deploy to production
                 sh '''
-                    echo "Deploying to production..."
-                    docker run -d \
-                        --name $CONTAINER_NAME \
-                        -p $PORT:8000 \
-                        --restart unless-stopped \
-                        $DOCKER_IMAGE
+                    # Kill any existing Django process
+                    pkill -f "manage.py runserver" || true
                     
-                    echo "Waiting for application to start..."
-                    sleep 20
+                    # Update code
+                    cd /tmp
+                    rm -rf django_jenkins_pipeline || true
+                    git clone https://github.com/aa-nadim/django_jenkins_pipeline.git
+                    cd django_jenkins_pipeline
                     
-                    if docker ps | grep $CONTAINER_NAME; then
-                        echo "✅ Application deployed successfully!"
-                        echo "🌐 Access your app at: http://$EC2_PUBLIC_IP:$PORT"
-                        echo "❤️ Health check: http://$EC2_PUBLIC_IP:$PORT/health/"
-                        
-                        # Quick test
-                        curl -f http://localhost:$PORT/health/ || echo "Health check endpoint may still be starting..."
+                    # Quick setup
+                    pip3 install -r requirements.txt --quiet
+                    python3 manage.py makemigrations --noinput
+                    python3 manage.py migrate --noinput
+                    
+                    # Run tests quickly
+                    python3 manage.py test --verbosity=1 --keepdb
+                    
+                    # Start Django in background
+                    nohup python3 manage.py runserver 0.0.0.0:$PORT > /tmp/django.log 2>&1 &
+                    
+                    # Quick verification
+                    sleep 3
+                    if curl -f -s http://localhost:$PORT/health/ > /dev/null; then
+                        echo "✅ SUPER FAST DEPLOY SUCCESS!"
+                        echo "🌐 Live at: http://$EC2_PUBLIC_IP:$PORT"
+                        echo "⚡ Total time: ~10-20 seconds!"
                     else
-                        echo "❌ Deployment failed!"
-                        docker logs $CONTAINER_NAME
+                        echo "❌ Deploy failed"
+                        tail /tmp/django.log
                         exit 1
                     fi
                 '''
