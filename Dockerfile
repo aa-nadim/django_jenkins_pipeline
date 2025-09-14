@@ -13,8 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire project
 COPY . .
 
+# Copy and make entrypoint script executable
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
 # Expose port 8000
 EXPOSE 8000
 
-# Run the application
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Use entrypoint script to run migrations before starting server
+CMD ["./entrypoint.sh"]
