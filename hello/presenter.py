@@ -5,5 +5,5 @@ class MessagePresenter:
         self.view = view
 
     def show_hello(self, request):
-        message, _ = Message.objects.get_or_create(text="Hello, World from Django! 🌍")
+        message, _ = Message.objects.get_or_create(text="Abdul Awal Nadim")
         return self.view.display(message, request)

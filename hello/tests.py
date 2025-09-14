@@ -58,6 +58,8 @@ class BasicIntegrationTest(TestCase):
     def test_template_renders(self):
         """Test that template renders without errors"""
         response = self.client.get('/')
-        # Just check that we got some HTML back
-        self.assertIn(b'<html>', response.content)
+        # Check for HTML5 doctype and html tag (more flexible)
+        self.assertIn(b'<!DOCTYPE html>', response.content)
+        self.assertIn(b'<html', response.content)  # This will match <html lang="en"> too
+        self.assertIn(b'</html>', response.content)
         print("✅ Template renders successfully")
