@@ -1,32 +1,20 @@
-# Fast Dockerfile - Optimized for CI/CD speed
+# Simple Dockerfile for CI/CD learning
 FROM python:3.9-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
-
+# Set working directory
 WORKDIR /app
 
-# Install only essential system packages (cached layer)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl && rm -rf /var/lib/apt/lists/*
-
-# Copy and install requirements first (cached layer if unchanged)
+# Copy requirements first for better caching
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code (this layer changes most often)
+# Copy the entire project
 COPY . .
 
-# Run migrations and setup in one layer
-RUN python manage.py makemigrations && \
-    python manage.py migrate && \
-    mkdir -p staticfiles
-
+# Expose port 8000
 EXPOSE 8000
 
-# Simple health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=2 \
-    CMD curl -f http://localhost:8000/health/ || exit 1
-
-# Direct command (no entrypoint script needed)
+# Run the application
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
