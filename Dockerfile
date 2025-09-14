@@ -1,43 +1,32 @@
-# Use Python 3.9 slim for better compatibility
+# Fast Dockerfile - Optimized for CI/CD speed
 FROM python:3.9-slim
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
-# Set working directory
 WORKDIR /app
 
-# Update system packages and install essential tools
-RUN apt-get update && apt-get install -y \
-    --no-install-recommends \
-    gcc \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Install only essential system packages (cached layer)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first (for better Docker layer caching)
-COPY requirements.txt /app/
-
-# Upgrade pip and install Python dependencies
-RUN pip install --upgrade pip
+# Copy and install requirements first (cached layer if unchanged)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the entire project
-COPY . /app/
+# Copy application code (this layer changes most often)
+COPY . .
 
-# Make entrypoint script executable
-COPY entrypoint.sh /app/
-RUN chmod +x /app/entrypoint.sh
+# Run migrations and setup in one layer
+RUN python manage.py makemigrations && \
+    python manage.py migrate && \
+    mkdir -p staticfiles
 
-# Create staticfiles directory
-RUN mkdir -p /app/staticfiles
-
-# Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+# Simple health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=2 \
     CMD curl -f http://localhost:8000/health/ || exit 1
 
-# Use entrypoint script
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Direct command (no entrypoint script needed)
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
